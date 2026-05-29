@@ -1,0 +1,17 @@
+{
+  "name": "@zaydiscold/squarespace-cli-mcp",
+  "version": "0.1.0",
+  "description": "Private stdio MCP companion for squarespace-cli",
+  "type": "module",
+  "bin": {
+    "squarespace-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@zaydiscold/squarespace-cli": "workspace:*"
+  }
+}

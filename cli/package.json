@@ -1,0 +1,34 @@
+{
+  "name": "@zaydiscold/squarespace-cli",
+  "version": "0.1.0",
+  "description": "Squarespace Commerce + account/domains API map plus a read-first TypeScript CLI for orders, products, inventory, transactions, contacts, webhooks, account, and domains.",
+  "type": "module",
+  "bin": {
+    "squarespace-cli": "./dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/lib.js",
+    "./client": "./dist/client.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "cli": "tsx src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "commander": "^14.0.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Zayd Khan (@ColdCooks / zaydiscold)",
+  "license": "MIT"
+}

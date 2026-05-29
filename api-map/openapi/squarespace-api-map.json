@@ -1,0 +1,361 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Squarespace Commerce + Account/Domains API Map",
+    "version": "0.1.0",
+    "summary": "A practical map of the Squarespace Commerce API plus the account/domains dashboard surface.",
+    "description": "Two surfaces in one map. (1) The public, documented Commerce API at https://api.squarespace.com/1.0/commerce — orders, products, product variants, inventory, transactions, profiles, and webhook subscriptions, authenticated with a bearer API key. (2) The internal account/domains surface at https://account.squarespace.com/api/account/... observed from the logged-in dashboard; these are session/cookie-authenticated in the browser and are mapped here read-only. All identifiers in examples are masked.",
+    "contact": {
+      "name": "Zayd Khan",
+      "url": "https://github.com/zaydiscold"
+    },
+    "license": { "name": "MIT" }
+  },
+  "servers": [
+    { "url": "https://api.squarespace.com/1.0/commerce", "description": "Public Commerce API (Bearer API key)" },
+    { "url": "https://account.squarespace.com", "description": "Account dashboard surface (session-authenticated; mapped read-only)" }
+  ],
+  "tags": [
+    { "name": "orders", "description": "Commerce orders" },
+    { "name": "products", "description": "Store products and variants" },
+    { "name": "inventory", "description": "Inventory levels and adjustments" },
+    { "name": "transactions", "description": "Commerce transactions" },
+    { "name": "profiles", "description": "Customer profiles / contacts" },
+    { "name": "webhooks", "description": "Webhook subscriptions" },
+    { "name": "account", "description": "Account dashboard surface (internal)" },
+    { "name": "domains", "description": "Account domains surface (internal)" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerApiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Squarespace API key passed as `Authorization: Bearer <SQUARESPACE_API_KEY>`."
+      },
+      "dashboardSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "login_session",
+        "description": "Account dashboard endpoints are authenticated by the logged-in browser session (cookies such as login_session, member-session, crumb)."
+      }
+    },
+    "parameters": {
+      "cursor": { "name": "cursor", "in": "query", "schema": { "type": "string" }, "description": "Opaque pagination cursor." },
+      "accountId": { "name": "accountId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Account id (observed as `1` for the authenticated account)." }
+    }
+  },
+  "security": [{ "bearerApiKey": [] }],
+  "paths": {
+    "/orders": {
+      "get": {
+        "tags": ["orders"],
+        "operationId": "listOrders",
+        "summary": "List orders",
+        "parameters": [
+          { "$ref": "#/components/parameters/cursor" },
+          { "name": "modifiedAfter", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "modifiedBefore", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "fulfillmentStatus", "in": "query", "schema": { "type": "string", "enum": ["PENDING", "FULFILLED", "CANCELED"] } }
+        ],
+        "responses": { "200": { "description": "A page of orders." } }
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "tags": ["orders"],
+        "operationId": "getOrder",
+        "summary": "Get a single order",
+        "parameters": [{ "name": "orderId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "The order." }, "404": { "description": "Not found." } }
+      }
+    },
+    "/orders/{orderId}/fulfillments": {
+      "post": {
+        "tags": ["orders"],
+        "operationId": "fulfillOrder",
+        "summary": "Fulfill an order",
+        "x-write": true,
+        "parameters": [{ "name": "orderId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shouldNotifyCustomer": { "type": "boolean" },
+                  "shipments": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "204": { "description": "Fulfilled." } }
+      }
+    },
+    "/products": {
+      "get": {
+        "tags": ["products"],
+        "operationId": "listProducts",
+        "summary": "List store products",
+        "parameters": [
+          { "$ref": "#/components/parameters/cursor" },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["PHYSICAL", "DIGITAL", "SERVICE", "GIFT_CARD"] } }
+        ],
+        "responses": { "200": { "description": "A page of products." } }
+      },
+      "post": {
+        "tags": ["products"],
+        "operationId": "createProduct",
+        "summary": "Create a product",
+        "x-write": true,
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/products/{productId}": {
+      "get": {
+        "tags": ["products"],
+        "operationId": "getProduct",
+        "summary": "Get a single product",
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "The product." } }
+      },
+      "post": {
+        "tags": ["products"],
+        "operationId": "updateProduct",
+        "summary": "Update a product",
+        "x-write": true,
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "Updated." } }
+      }
+    },
+    "/products/{productId}/variants": {
+      "get": {
+        "tags": ["products"],
+        "operationId": "listProductVariants",
+        "summary": "List a product's variants",
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Variants for the product." } }
+      },
+      "post": {
+        "tags": ["products"],
+        "operationId": "createProductVariant",
+        "summary": "Create a product variant",
+        "x-write": true,
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/products/{productId}/variants/{variantId}": {
+      "delete": {
+        "tags": ["products"],
+        "operationId": "deleteProductVariant",
+        "summary": "Delete a product variant",
+        "x-write": true,
+        "parameters": [
+          { "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "variantId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "Deleted." } }
+      }
+    },
+    "/inventory": {
+      "get": {
+        "tags": ["inventory"],
+        "operationId": "getInventory",
+        "summary": "Get inventory levels",
+        "parameters": [{ "$ref": "#/components/parameters/cursor" }],
+        "responses": { "200": { "description": "A page of inventory records." } }
+      }
+    },
+    "/inventory/{variantId}": {
+      "get": {
+        "tags": ["inventory"],
+        "operationId": "getInventoryItem",
+        "summary": "Get inventory for one variant",
+        "parameters": [{ "name": "variantId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Inventory for the variant." } }
+      }
+    },
+    "/inventory/adjustments": {
+      "post": {
+        "tags": ["inventory"],
+        "operationId": "adjustInventory",
+        "summary": "Adjust inventory quantities",
+        "x-write": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "incrementOperations": { "type": "array", "items": { "type": "object" } },
+                  "decrementOperations": { "type": "array", "items": { "type": "object" } },
+                  "setFiniteOperations": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "204": { "description": "Adjusted." } }
+      }
+    },
+    "/transactions": {
+      "get": {
+        "tags": ["transactions"],
+        "operationId": "listTransactions",
+        "summary": "List transactions",
+        "parameters": [
+          { "$ref": "#/components/parameters/cursor" },
+          { "name": "modifiedAfter", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "modifiedBefore", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "A page of transactions." } }
+      }
+    },
+    "/profiles": {
+      "get": {
+        "tags": ["profiles"],
+        "operationId": "listProfiles",
+        "summary": "List customer profiles / contacts",
+        "parameters": [
+          { "$ref": "#/components/parameters/cursor" },
+          { "name": "filter", "in": "query", "schema": { "type": "string" } },
+          { "name": "sortDirection", "in": "query", "schema": { "type": "string", "enum": ["ASC", "DESC"] } },
+          { "name": "sortField", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "A page of profiles." } }
+      }
+    },
+    "/profiles/{profileId}": {
+      "get": {
+        "tags": ["profiles"],
+        "operationId": "getProfile",
+        "summary": "Get a single profile",
+        "parameters": [{ "name": "profileId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "The profile." } }
+      }
+    },
+    "/webhook_subscriptions": {
+      "get": {
+        "tags": ["webhooks"],
+        "operationId": "listWebhookSubscriptions",
+        "summary": "List webhook subscriptions",
+        "responses": { "200": { "description": "Webhook subscriptions." } }
+      },
+      "post": {
+        "tags": ["webhooks"],
+        "operationId": "createWebhookSubscription",
+        "summary": "Create a webhook subscription",
+        "x-write": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["endpointUrl", "topics"],
+                "properties": {
+                  "endpointUrl": { "type": "string", "format": "uri" },
+                  "topics": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/api/account/{accountId}/context/project-picker": {
+      "get": {
+        "tags": ["account"],
+        "operationId": "getAccountProjectPickerContext",
+        "summary": "Account project-picker context",
+        "description": "Internal dashboard surface. Returns account context: authenticatedAccountId, contextId, csrfToken, environmentDomain, hasDomains, hasWebsites, isCircleMember, isExternalDeveloper, preferredLocale, etc. Source: logged-in dashboard capture (account-api-redacted.json), values masked.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/accountId" }],
+        "responses": { "200": { "description": "Account context object." } }
+      }
+    },
+    "/api/account/{accountId}/website-briefs": {
+      "get": {
+        "tags": ["account"],
+        "operationId": "getAccountWebsiteBriefs",
+        "summary": "Account website briefs",
+        "description": "Internal dashboard surface. Array of website briefs: active, canonicalUrl, createdOn, id, identifier, internalUrl, language, timeZone, title, websiteStatus, websiteType. Source: logged-in dashboard capture, values masked.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/accountId" }],
+        "responses": { "200": { "description": "Array of website briefs." } }
+      }
+    },
+    "/api/account/{accountId}/project-picker/website-summaries": {
+      "get": {
+        "tags": ["account"],
+        "operationId": "getAccountWebsiteSummaries",
+        "summary": "Account website summaries (project picker)",
+        "description": "Internal dashboard surface. Paged: { hasNextPage, page, websites[] }. Source: logged-in dashboard capture, values masked.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/accountId" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Paged website summaries." } }
+      }
+    },
+    "/api/account/{accountId}/website-summaries": {
+      "get": {
+        "tags": ["account"],
+        "operationId": "getAccountWebsiteSummariesLegacy",
+        "summary": "Account website summaries (legacy path)",
+        "description": "Internal dashboard surface. Paged: { hasNextPage, page, websites[] }. Source: logged-in dashboard capture, values masked.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/accountId" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Paged website summaries." } }
+      }
+    },
+    "/api/account/{accountId}/manifests/developer-platform": {
+      "get": {
+        "tags": ["account"],
+        "operationId": "getDeveloperPlatformManifest",
+        "summary": "Developer-platform asset manifest",
+        "description": "Internal dashboard surface. Returns the developer-platform micro-frontend asset manifest (localized JS/CSS bundle map). Source: logged-in dashboard capture.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/accountId" }],
+        "responses": { "200": { "description": "Asset manifest object." } }
+      }
+    },
+    "/api/account/{accountId}/user/domains": {
+      "get": {
+        "tags": ["domains"],
+        "operationId": "getAccountUserDomains",
+        "summary": "Account user domains",
+        "description": "Internal dashboard surface. Returns the array of domains attached to the user. Source: logged-in dashboard capture, values masked.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/accountId" }],
+        "responses": { "200": { "description": "Array of domains." } }
+      }
+    },
+    "/api/account/{accountId}/domain-summaries": {
+      "get": {
+        "tags": ["domains"],
+        "operationId": "getAccountDomainSummaries",
+        "summary": "Account domain summaries",
+        "description": "Internal dashboard surface. Paged domain summaries. Returns 400 without the expected params; map records the shape { contextId, details, message, subtype, type }. Source: logged-in dashboard capture, values masked.",
+        "security": [{ "dashboardSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/accountId" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Paged domain summaries." }, "400": { "description": "Validation error." } }
+      }
+    }
+  }
+}
