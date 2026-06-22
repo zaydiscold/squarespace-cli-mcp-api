@@ -1,4 +1,4 @@
-# squarespace-cli
+# Squarespace CLI (MCP + API)
 
 I run a couple of sites and a store on Squarespace, and I kept wanting to do the
 boring parts — check orders, look at inventory, list transactions, poke at my
